@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inútil Clicker</title>
+  <style>
+    :root {
+      --bg: #171513;
+      --panel: #24211e;
+      --panel-2: #2d2925;
+      --text: #f4eee5;
+      --muted: #b4a99b;
+      --accent: #e4572e;
+      --accent-dark: #a9361b;
+      --line: #494139;
+      --gold: #f0bd58;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 24px;
+      background: radial-gradient(circle at top, #393027 0, var(--bg) 55%);
+      color: var(--text); font-family: Arial, Helvetica, sans-serif;
+    }
+    main { width: min(1050px, 100%); margin: 0 auto; }
+    header { text-align: center; margin-bottom: 22px; }
+    h1 { margin: 0; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: 1px; }
+    header p { color: var(--muted); margin: 8px 0 0; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr); gap: 18px; }
+    .panel {
+      background: linear-gradient(145deg, var(--panel-2), var(--panel));
+      border: 1px solid var(--line); border-radius: 16px; padding: 20px;
+      box-shadow: 0 12px 30px #0005;
+    }
+    .game { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 510px; }
+    #score { font-size: clamp(2.4rem, 7vw, 4rem); font-weight: 800; margin: 0; overflow-wrap: anywhere; }
+    #rate { color: var(--muted); margin: 8px 0 25px; }
+    #clickButton {
+      width: 210px; height: 210px; max-width: 60vw; max-height: 60vw;
+      border: 5px solid #111; border-radius: 50%;
+      background: radial-gradient(circle at 32% 25%, #ff8969, var(--accent) 55%, var(--accent-dark));
+      color: white; font-size: 5.5rem; cursor: pointer;
+      box-shadow: 0 13px 0 #68220f, 0 20px 28px #0008, inset 0 4px 8px #ffffff55;
+      transition: transform .08s, box-shadow .08s, filter .08s;
+      user-select: none; touch-action: manipulation;
+    }
+    #clickButton:hover { filter: brightness(1.08); }
+    #clickButton:active, #clickButton.pressed {
+      transform: translateY(9px);
+      box-shadow: 0 4px 0 #68220f, 0 9px 15px #0008, inset 0 4px 8px #ffffff55;
+    }
+    #message { min-height: 44px; color: var(--muted); margin: 26px 0 0; line-height: 1.4; }
+    h2 { margin: 0 0 14px; font-size: 1.25rem; }
+    .upgrade-list { display: grid; gap: 9px; }
+    .upgrade {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      width: 100%; text-align: left; padding: 12px;
+      color: var(--text); background: #1b1917; border: 1px solid var(--line);
+      border-radius: 10px; cursor: pointer; font: inherit; transition: border-color .15s, background .15s;
+    }
+    .upgrade:hover:not(:disabled) { border-color: var(--accent); background: #30241f; }
+    .upgrade:disabled { opacity: .45; cursor: not-allowed; }
+    .upgrade strong { display: block; margin-bottom: 4px; }
+    .upgrade small { color: var(--muted); }
+    .cost { color: var(--gold); font-weight: 800; white-space: nowrap; }
+    .count { color: var(--gold); font-size: .85rem; margin-left: 5px; }
+    .achievements { display: flex; flex-wrap: wrap; gap: 7px; }
+    .achievement {
+      padding: 7px 10px; border-radius: 20px; border: 1px solid var(--line);
+      color: #91877b; background: #1b1917; font-size: .85rem;
+    }
+    .achievement.unlocked { color: #21190c; background: var(--gold); border-color: var(--gold); font-weight: 700; }
+
+    .prestige-panel { border-color: #8a6b37; }
+    .prestige-panel h2 { color: var(--gold); }
+    .prestige-stats { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:10px 0; }
+    .prestige-note { color:var(--muted); font-size:.9rem; line-height:1.45; }
+    .progress-track { height:18px; background:#111; border:1px solid #75603d; border-radius:20px; overflow:hidden; margin:12px 0 6px; }
+    .progress-fill { height:100%; width:0%; background:linear-gradient(90deg,#9b6c25,#f0bd58); transition:width .2s ease; }
+    .prestige-button, .permanent-upgrade { width:100%; margin-top:9px; padding:12px; border:1px solid #8a6b37; border-radius:10px; background:#332817; color:var(--text); font:inherit; cursor:pointer; text-align:left; }
+    .prestige-button { text-align:center; font-weight:800; background:linear-gradient(135deg,#6e4d1c,#3c2b13); }
+    .prestige-button:disabled, .permanent-upgrade:disabled { opacity:.45; cursor:not-allowed; }
+    .permanent-upgrade small { display:block; color:var(--muted); margin-top:5px; line-height:1.35; }
+
+    .bottom { text-align: center; margin-top: 18px; }
+    #reset {
+      background: transparent; color: var(--muted); border: 0; padding: 9px;
+      text-decoration: underline; cursor: pointer; font-size: .95rem;
+    }
+    .popup {
+      position: fixed; z-index: 5; color: #ffbd70; font-weight: 900;
+      font-size: 1.3rem; pointer-events: none; text-shadow: 0 2px 5px #000;
+      animation: floatUp .8s ease-out forwards;
+    }
+    @keyframes floatUp { to { transform: translateY(-65px); opacity: 0; } }
+    @media (max-width: 760px) {
+      body { padding: 14px; }
+      .layout { grid-template-columns: 1fr; }
+      .game { min-height: 400px; }
+      .panel { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>🗑️ Inútil Clicker</h1>
+      <p>Clique. Não serve para absolutamente nada.</p>
+    </header>
+
+    <div class="layout">
+      <section class="panel game">
+        <p id="score">0</p>
+        <p id="rate">0 inutilidades por segundo · 1 por clique</p>
+        <button id="clickButton" aria-label="Clique para ganhar pontos">🗑️</button>
+        <p id="message" aria-live="polite">Comece a desperdiçar seu tempo.</p>
+      </section>
+
+      <section>
+        <div class="panel">
+          <h2>Melhorias igualmente inúteis</h2>
+          <div id="upgrades" class="upgrade-list"></div>
+        </div>
+        <div class="panel" style="margin-top:18px">
+          <h2>Conquistas sem valor</h2>
+          <div id="achievements" class="achievements"></div>
+        </div>
+        <div class="panel prestige-panel" style="margin-top:18px">
+          <h2>♻️ Caimbra — Prestígio</h2>
+          <div class="prestige-stats">
+            <strong>Qualidade de Vida: <span id="qualityValue">0</span> QV</strong>
+            <strong>Caimbras realizadas: <span id="prestigeCount">0</span></strong>
+          </div>
+          <p class="prestige-note">Acumule 1.000.000 de pontos nesta rodada para realizar a Caimbra. Você recebe 1 QV por milhão acumulado. Seus pontos e melhorias comuns serão reiniciados, mas sua QV e suas melhorias permanentes continuam.</p>
+          <div class="progress-track" role="progressbar" aria-label="Progresso para a Caimbra" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-fill" id="caimbraProgressBar"></div>
+          </div>
+          <p class="prestige-note" id="caimbraProgressText">0 / 1.000.000 pontos (0%)</p>
+          <button class="prestige-button" id="prestigeButton" type="button" disabled>CAIMBRA — ainda não disponível</button>
+          <h2 style="margin-top:20px">Melhorias permanentes</h2>
+          <div id="prestigeUpgrades" class="prestige-upgrades"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="bottom">
+      <button id="reset">Apagar tudo e recomeçar do nada</button>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const SAVE_KEY = "inutil-clicker-html-save";
+
+    const UPGRADES = [
+      { id: "dedo", nome: "Dedo Preguiçoso", descricao: "+1 por clique", precoBase: 15, porClique: 1, porSegundo: 0 },
+      { id: "est", nome: "Estagiário Inútil", descricao: "1 ponto por segundo", precoBase: 50, porClique: 0, porSegundo: 1 },
+      { id: "vent", nome: "Ventilador de Teto", descricao: "5 pontos por segundo", precoBase: 300, porClique: 0, porSegundo: 5 },
+      { id: "com", nome: "Comitê de Reuniões", descricao: "25 pontos por segundo", precoBase: 2000, porClique: 0, porSegundo: 25 },
+      { id: "mot", nome: "Motor de Nada", descricao: "120 pontos por segundo", precoBase: 12000, porClique: 0, porSegundo: 120 },
+      { id: "bur", nome: "Burocracia Infinita", descricao: "600 pontos por segundo", precoBase: 80000, porClique: 0, porSegundo: 600 },
+      { id: "lub", nome: "Lubrificação do Botão", descricao: "Reduz o intervalo entre cliques em 50 ms (mínimo: 100 ms)", precoBase: 500, porClique: 0, porSegundo: 0 }
+    ];
+
+    const ACHIEVEMENTS = [
+      [1, "Primeiro clique"],
+      [100, "Cem à toa"],
+      [1000, "Mil sem sentido"],
+      [10000, "Dez mil perdidos"],
+      [100000, "Cem mil e nada"],
+      [1000000, "Milionário de nada"]
+    ];
+
+    const MESSAGES = [
+      "Isso mudou algo? Não.",
+      "Parabéns, você clicou.",
+      "Continue, o universo não liga.",
+      "Seu dedo agradece. Ou não.",
+      "Produtividade: zero.",
+      "Mais um pouco de nada.",
+      "Impressionante. Inútil, mas impressionante.",
+      "Você poderia estar bebendo água."
+    ];
+
+    const PRESTIGE_REQUIREMENT = 1000000;
+    const PRESTIGE_UPGRADES = [
+      { id: "click", nome: "Clique aprimorado", descricao: "+25% de pontos por clique por nível", custo: 1 },
+      { id: "production", nome: "Produção aprimorada", descricao: "+25% de produção automática por nível", custo: 2 },
+      { id: "all", nome: "Qualidade superior", descricao: "+25% em todos os ganhos por nível", custo: 3 }
+    ];
+    let state = { points: 0, total: 0, owned: {}, quality: 0, prestigeCount: 0, prestigeOwned: {} };
+    let nextClickAt = 0;
+
+    function loadGame() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
+        if (saved && Number.isFinite(saved.points) && Number.isFinite(saved.total)) {
+          state = {
+            points: Math.max(0, saved.points),
+            total: Math.max(0, saved.total),
+            owned: saved.owned && typeof saved.owned === "object" ? saved.owned : {},
+            quality: Math.max(0, Number(saved.quality) || 0),
+            prestigeCount: Math.max(0, Number(saved.prestigeCount) || 0),
+            prestigeOwned: saved.prestigeOwned && typeof saved.prestigeOwned === "object" ? saved.prestigeOwned : {}
+          };
+        }
+      } catch (error) {
+        console.warn("Não foi possível carregar o progresso:", error);
+      }
+    }
+
+    function saveGame() {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      } catch (error) {
+        console.warn("Não foi possível salvar o progresso:", error);
+      }
+    }
+
+    function owned(id) { return Math.max(0, Number(state.owned[id]) || 0); }
+    function prestigeOwned(id) { return Math.max(0, Number(state.prestigeOwned[id]) || 0); }
+    function cost(upgrade) { return Math.ceil(upgrade.precoBase * Math.pow(1.15, owned(upgrade.id))); }
+    function clickDelayMs() { return Math.max(100, 500 - owned("lub") * 50); }
+    function permanentMultiplier(type) {
+      const levels = type === "click" ? prestigeOwned("click") + prestigeOwned("all")
+        : type === "production" ? prestigeOwned("production") + prestigeOwned("all")
+        : prestigeOwned("all");
+      return Math.pow(1.25, levels);
+    }
+    function pointsPerClick() {
+      return (1 + UPGRADES.reduce((sum, u) => sum + u.porClique * owned(u.id), 0)) * permanentMultiplier("click");
+    }
+    function pointsPerSecond() {
+      return UPGRADES.reduce((sum, u) => sum + u.porSegundo * owned(u.id), 0) * permanentMultiplier("production");
+    }
+    function format(value) {
+      if (value < 10000) return Math.floor(value).toLocaleString("pt-BR");
+      if (value < 1000000) return (value / 1000).toFixed(1).replace(".", ",") + " mil";
+      if (value < 1000000000) return (value / 1000000).toFixed(2).replace(".", ",") + " mi";
+      return (value / 1000000000).toFixed(2).replace(".", ",") + " bi";
+    }
+
+    const scoreEl = document.getElementById("score");
+    const rateEl = document.getElementById("rate");
+    const buttonEl = document.getElementById("clickButton");
+    const messageEl = document.getElementById("message");
+    const upgradesEl = document.getElementById("upgrades");
+    const achievementsEl = document.getElementById("achievements");
+    const qualityValueEl = document.getElementById("qualityValue");
+    const prestigeCountEl = document.getElementById("prestigeCount");
+    const prestigeProgressBarEl = document.getElementById("caimbraProgressBar");
+    const prestigeProgressTextEl = document.getElementById("caimbraProgressText");
+    const prestigeButtonEl = document.getElementById("prestigeButton");
+    const prestigeUpgradesEl = document.getElementById("prestigeUpgrades");
+
+    function buildUpgradeButtons() {
+      upgradesEl.innerHTML = "";
+      for (const upgrade of UPGRADES) {
+        const button = document.createElement("button");
+        button.className = "upgrade";
+        button.type = "button";
+        button.dataset.upgrade = upgrade.id;
+        button.addEventListener("click", () => buyUpgrade(upgrade.id));
+        upgradesEl.appendChild(button);
+      }
+    }
+
+    function render() {
+      scoreEl.textContent = format(state.points);
+      rateEl.textContent = `${format(pointsPerSecond())} inutilidades por segundo · ${format(pointsPerClick())} por clique`;
+
+      for (const upgrade of UPGRADES) {
+        const button = upgradesEl.querySelector(`[data-upgrade="${upgrade.id}"]`);
+        const quantity = owned(upgrade.id);
+        const price = cost(upgrade);
+        const delayAtLimit = upgrade.id === "lub" && clickDelayMs() <= 100;
+        button.disabled = state.points < price || delayAtLimit;
+        const description = upgrade.id === "lub"
+          ? (delayAtLimit ? "Intervalo mínimo atingido: 100 ms" : `${upgrade.descricao} · Atual: ${clickDelayMs()} ms`)
+          : upgrade.descricao;
+        button.innerHTML = `
+          <span>
+            <strong>${upgrade.nome}<span class="count">(${quantity})</span></strong>
+            <small>${description}</small>
+          </span>
+          <span class="cost">${format(price)}</span>`;
+      }
+
+      achievementsEl.innerHTML = "";
+      for (const [limit, name] of ACHIEVEMENTS) {
+        const badge = document.createElement("span");
+        badge.className = "achievement" + (state.total >= limit ? " unlocked" : "");
+        badge.textContent = name;
+        achievementsEl.appendChild(badge);
+      }
+
+      const progress = Math.min(100, (state.total / PRESTIGE_REQUIREMENT) * 100);
+      qualityValueEl.textContent = format(state.quality);
+      prestigeCountEl.textContent = state.prestigeCount;
+      prestigeProgressBarEl.style.width = progress + "%";
+      prestigeProgressBarEl.parentElement.setAttribute("aria-valuenow", String(Math.floor(progress)));
+      prestigeProgressTextEl.textContent =
+        `${format(Math.min(state.total, PRESTIGE_REQUIREMENT))} / 1.000.000 pontos (${progress.toFixed(1).replace(".", ",")}%)`;
+
+      const ready = state.total >= PRESTIGE_REQUIREMENT;
+      prestigeButtonEl.disabled = !ready;
+      prestigeButtonEl.textContent = ready ? "REALIZAR CAIMBRA" : "CAIMBRA — ainda não disponível";
+
+      prestigeUpgradesEl.innerHTML = "";
+      for (const item of PRESTIGE_UPGRADES) {
+        const level = prestigeOwned(item.id);
+        const nextCost = item.custo * (level + 1);
+        const upgradeButton = document.createElement("button");
+        upgradeButton.type = "button";
+        upgradeButton.className = "permanent-upgrade";
+        upgradeButton.disabled = state.quality < nextCost;
+        upgradeButton.innerHTML = `<strong>${item.nome} <span class="count">(${level})</span></strong><small>${item.descricao} · Próximo nível: ${nextCost} QV</small>`;
+        upgradeButton.addEventListener("click", () => buyPrestigeUpgrade(item.id));
+        prestigeUpgradesEl.appendChild(upgradeButton);
+      }
+    }
+
+    function showPopup(event, amount) {
+      const popup = document.createElement("span");
+      popup.className = "popup";
+      popup.textContent = "+" + format(amount);
+      popup.style.left = `${event.clientX}px`;
+      popup.style.top = `${event.clientY}px`;
+      document.body.appendChild(popup);
+      popup.addEventListener("animationend", () => popup.remove(), { once: true });
+    }
+
+    function clickForPoints(event) {
+      const gain = pointsPerClick();
+      state.points += gain;
+      state.total += gain;
+      showPopup(event, gain);
+      if (Math.random() < 0.12) {
+        messageEl.textContent = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+      } else {
+        messageEl.textContent = `Você ganhou ${format(gain)} ponto(s). Continue com seu trabalho inútil!`;
+      }
+      buttonEl.classList.add("pressed");
+      window.setTimeout(() => buttonEl.classList.remove("pressed"), 90);
+      render();
+      saveGame();
+    }
+
+    function buyUpgrade(id) {
+      const upgrade = UPGRADES.find(item => item.id === id);
+      if (!upgrade) return;
+      const price = cost(upgrade);
+      if (state.points < price || (id === "lub" && clickDelayMs() <= 100)) return;
+
+      state.points -= price;
+      state.owned[id] = owned(id) + 1;
+      messageEl.textContent = `Você comprou: ${upgrade.nome}. Que investimento... inútil!`;
+      render();
+      saveGame();
+    }
+
+    function buyPrestigeUpgrade(id) {
+      const item = PRESTIGE_UPGRADES.find(upgrade => upgrade.id === id);
+      if (!item) return;
+      const price = item.custo * (prestigeOwned(id) + 1);
+      if (state.quality < price) return;
+      state.quality -= price;
+      state.prestigeOwned[id] = prestigeOwned(id) + 1;
+      messageEl.textContent = `Melhoria permanente comprada: ${item.nome}.`;
+      render();
+      saveGame();
+    }
+
+    function performPrestige() {
+      if (state.total < PRESTIGE_REQUIREMENT) return;
+      const reward = Math.floor(state.total / PRESTIGE_REQUIREMENT);
+      const confirmed = window.confirm(
+        `Realizar a Caimbra e receber ${reward} QV? Seus pontos e melhorias comuns serão zerados. Sua QV e suas melhorias permanentes serão mantidas.`
+      );
+      if (!confirmed) return;
+
+      state.quality += reward;
+      state.prestigeCount += 1;
+      state.points = 0;
+      state.total = 0;
+      state.owned = {};
+      nextClickAt = 0;
+      messageEl.textContent = `Caimbra realizada! Você recebeu ${reward} Qualidade de Vida.`;
+      render();
+      saveGame();
+    }
+
+    function resetGame() {
+      if (!window.confirm("Apagar todo o seu nada e começar novamente?")) return;
+      state = { points: 0, total: 0, owned: {}, quality: 0, prestigeCount: 0, prestigeOwned: {} };
+      messageEl.textContent = "Tudo zerado. Seu nada está novinho.";
+      render();
+      saveGame();
+    }
+
+    let previousTime = performance.now();
+    function automaticPoints(now) {
+      const elapsed = Math.min((now - previousTime) / 1000, 1);
+      previousTime = now;
+      const gain = pointsPerSecond() * elapsed;
+      if (gain > 0) {
+        state.points += gain;
+        state.total += gain;
+        render();
+      }
+      requestAnimationFrame(automaticPoints);
+    }
+
+    buttonEl.addEventListener("click", event => {
+      const now = Date.now();
+      if (now < nextClickAt) return;
+      nextClickAt = now + clickDelayMs();
+      clickForPoints(event);
+    });
+    prestigeButtonEl.addEventListener("click", performPrestige);
+    document.getElementById("reset").addEventListener("click", resetGame);
+    window.addEventListener("beforeunload", saveGame);
+
+    loadGame();
+    state.quality = Math.max(0, Number(state.quality) || 0);
+    state.prestigeCount = Math.max(0, Number(state.prestigeCount) || 0);
+    state.prestigeOwned = state.prestigeOwned && typeof state.prestigeOwned === "object" ? state.prestigeOwned : {};
+    buildUpgradeButtons();
+    render();
+    window.setInterval(saveGame, 3000);
+    requestAnimationFrame(automaticPoints);
+  </script>
+</body>
+</html>
